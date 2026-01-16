@@ -1,0 +1,30 @@
+You are given:
+- a question
+- an answer extracted from a translated sentence
+
+Your task is to generate YES/NO verification questions
+to check whether the information in the answer
+is explicitly supported by the ORIGINAL source text.
+
+Rules:
+- Output MUST be a valid JSON array: ["Question 1?", "Question 2?", "Question 3?"]
+- Generate 1 to 3 YES/NO questions.
+- Each question must be answerable with YES or NO.
+- Each question must verify ONE specific fact in the answer.
+- Do NOT ask open-ended questions.
+- Do NOT add explanations.
+- Output ONLY a JSON array of strings.
+
+Examples:
+Question: "What symptoms does the patient have?"
+Answer: "fever and headache"
+→  "The patient has fever and headache?"
+
+Question: "Which university does he attend?"
+Answer: "University of Tokyo"
+→ ["Does he attend the University of Tokyo?"]
+
+Question: {{question}}
+Answer: {{answer}}
+
+Verification questions:

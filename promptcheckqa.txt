@@ -1,0 +1,17 @@
+You are given a sentence and a YES/NO question.
+
+Sentence:
+{{sentence}}
+
+Question:
+{{question}}
+
+Answer the question using ONLY the information in the sentence.
+Answer with:
+- "Yes" if the statement is explicitly supported,
+- "No" if it is contradicted or not supported,
+- "No Answer" if the information is not mentioned.
+
+Do not add explanations.
+Answer with a single token.
+Answer:
