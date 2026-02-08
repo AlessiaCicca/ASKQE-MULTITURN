@@ -30,8 +30,8 @@ You are a controlled text editing system.
 
 TASK:
 Identify the language of the provided sentence. 
-Insert exactly ONE new named entity (person, organization, or place)
-that is NOT mentioned in the original sentence.
+Your goal is to perturb the sentence by adding words.
+Make sure that the added word does not disturb the grammaticality of the sentence but should change the meaning in a significant way.
 
 CONSTRAINTS:
 - Do NOT remove, rewrite, or replace any existing words.
@@ -54,6 +54,7 @@ INPUT SENTENCE:
 
 OUTPUT:
 Return ONLY the modified sentence in the identified language.
+
 """,
 
     "numerical_injection": """
@@ -130,25 +131,6 @@ Return ONLY the modified sentence.
 """
 }
 
-
-def trova_differenza(frase_a, frase_b):
-    parole_a = frase_a.split()
-    parole_b = frase_b.split()
-    
-    # Rimuovi punteggiatura per confronto più accurato
-    def pulisci_parola(parola):
-        return parola.strip('.,;:!?').lower()
-    
-    parole_a_pulite = set(pulisci_parola(p) for p in parole_a)
-    
-    # Trova parole in B che non esistono in A (anche senza punteggiatura)
-    nuove_parole = []
-    for parola in parole_b:
-        parola_pulita = pulisci_parola(parola)
-        if parola_pulita and parola_pulita not in parole_a_pulite:
-            nuove_parole.append(parola)
-    
-    return ' '.join(nuove_parole)
 
 # =========================
 # MAIN
@@ -271,11 +253,10 @@ def main():
                 out_field = "pert_mt"
                 data[out_field] = generated_text
 
-                data["new"] = trova_differenza(sentence,generated_text)
+             
 
                 print(f"[OK] {sent_id} | {out_field}")
                 print(generated_text)
-                print(f"[NEW] {data['new']}")
                 print("-" * 80)
 
             f_out.write(json.dumps(data, ensure_ascii=False) + "\n")
