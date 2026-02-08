@@ -95,12 +95,10 @@ def main():
                 {"role": "user", "content": prompt},
             ]
 
-            inputs = tokenizer.apply_chat_template(
-                messages,
-                add_generation_prompt=True,
-                return_tensors="pt",
-                padding=True
-            ).to(device)
+            inputs = tokenizer(messages, return_tensors="pt", padding=True, truncation=True).to(device)
+
+            # Aggiungi un debug per verificare la forma
+            print(f"[DEBUG] input_ids shape: {inputs['input_ids'].shape}")
 
             # Generazione del testo
             with torch.no_grad():
@@ -115,9 +113,14 @@ def main():
                     top_p=0.85
                 )
 
+                # Verifica la forma dell'output
+                output_ids = outputs[0]
+                print(f"[DEBUG] Output shape: {output_ids.shape}")
+
+                # Estrai la risposta correttamente
                 prompt_len = inputs["input_ids"].shape[-1]
-                response = outputs[0][prompt_len:]
-                generated_text = tokenizer.decode(response, skip_special_tokens=True).strip()
+                response = output_ids[:, prompt_len:]
+                generated_text = tokenizer.decode(response[0], skip_special_tokens=True).strip()
 
             # Aggiungi il risultato al dizionario dei dati
             data["pert_mt"] = generated_text
