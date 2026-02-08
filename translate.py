@@ -96,8 +96,6 @@ def main():
 
 
 
-    args = parser.parse_args()
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
 

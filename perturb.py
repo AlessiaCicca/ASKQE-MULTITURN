@@ -21,115 +21,29 @@ import difflib
 # model_id = "Qwen/Qwen2.5-3B-Instruct"
 model_id = "Qwen/Qwen2.5-7B-Instruct"
 
+
 # =========================
-# PROMPTS
+# LOAD PROMPT
 # =========================
-PERTURBATION_PROMPTS = {
-    "entity_injection": """
-You are a controlled text editing system.
+def load_prompt(prompt_path: str, prompt_key: str) -> str:
+    if not os.path.exists(prompt_path):
+        raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
 
-TASK:
-Identify the language of the provided sentence. 
-Your goal is to perturb the sentence by adding words.
-Make sure that the added word does not disturb the grammaticality of the sentence but should change the meaning in a significant way.
+    with open(prompt_path, "r", encoding="utf-8") as f:
+        prompts = json.load(f)
 
-CONSTRAINTS:
-- Do NOT remove, rewrite, or replace any existing words.
-- Insert the entity only by adding new tokens.
-- Do NOT add more than one entity.
-- Do NOT add explanations, comments, or notes.
-- Keep the result as a single sentence.
-- Integrate the entity naturally and grammatically.
-- The output must differ from the input only by the insertion of the new entity.
+    if prompt_key not in prompts:
+        raise KeyError(
+            f"Prompt key '{prompt_key}' not found. "
+            f"Available keys: {list(prompts.keys())}"
+        )
 
-ABSTRACT EXAMPLE (illustrative only):
-Input:
-"X observed an increase."
+    prompt = prompts[prompt_key]
+    if not isinstance(prompt, str) or not prompt.strip():
+        raise ValueError(f"Prompt '{prompt_key}' is empty or invalid")
 
-Output:
-"X observed an increase in Y."
+    return prompt
 
-INPUT SENTENCE:
-{{sentence}}
-
-OUTPUT:
-Return ONLY the modified sentence in the identified language.
-
-""",
-
-    "numerical_injection": """
-You are a controlled text editing system.
-
-TASK:
-Identify the language of the input sentence.
-Insert exactly ONE new numerical value.
-
-LANGUAGE CONSTRAINT:
-- The output language MUST be identical to the input language.
-- Do NOT translate the sentence.
-
-CONSTRAINTS:
-- Insert the numerical value only by adding new tokens.
-- Use a short numerical phrase (2–5 tokens).
-- Do NOT remove, rewrite, or replace any existing words.
-- Do NOT add explanations, comments, or notes.
-- Do NOT add more than one numerical value.
-- Do NOT add new clauses or sentences.
-- Keep the result as a single sentence.
-- The output must differ from the input only by minimal insertion.
-
-
-INPUT SENTENCE:
-{{sentence}}
-
-OUTPUT:
-Return ONLY the modified sentence.
-
-
-""",
-
-    "over_specification": """
-You are a controlled text editing system.
-
-TASK:
-Insert exactly ONE manner-based over-specification that answers "how"
-by adding a short descriptive construction.
-
-DEFINITION:
-The added detail must describe the manner or process of an existing action
-using a minimal multi-token construction (2–4 tokens), without adding
-new factual information.
-
-LANGUAGE CONSTRAINT:
-- The output language MUST be identical to the input language.
-- Do NOT translate the sentence.
-
-CONSTRAINTS:
-- Add exactly ONE descriptive construction (2–4 tokens).
-- The construction may include an adjective, an adverb, or a fixed manner phrase.
-- Do NOT add numbers, dates, or named entities.
-- Do NOT introduce causes, consequences, or explanations.
-- Do NOT add parenthetical text or punctuation-based comments.
-- Do NOT remove, rewrite, or replace any existing words.
-- Do NOT add new clauses or sentences.
-- Keep the result as a single sentence.
-- The output must differ from the input only by the insertion of the construction.
-- Integrate the construction naturally and grammatically.
-
-ABSTRACT EXAMPLE (illustrative only):
-Input:
-"X increased."
-Output:
-"X increased in a gradual manner."
-
-INPUT SENTENCE:
-{{sentence}}
-
-OUTPUT:
-Return ONLY the modified sentence.
-
-"""
-}
 
 
 # =========================
@@ -139,13 +53,14 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_path", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
-    parser.add_argument(
-        "--perturbation_type",
-        type=str,
-        required=True,
-        choices=list(PERTURBATION_PROMPTS.keys())
-    )
+    parser.add_argument("--prompt_path", type=str, required=True)
+    parser.add_argument("--prompt_key", type=str, required=True)
     args = parser.parse_args()
+
+    # =========================
+    # LOAD PROMPT
+    # =========================
+    PROMPT_TEMPLATE = load_prompt(args.prompt_path, args.prompt_key) 
 
 
     if not os.path.isfile(args.input_path):
@@ -210,15 +125,14 @@ def main():
             if not sentence:
                 print(f"[WARNING] Empty sentence in {mt_field} → SKIP")
                 continue
-            prompt = (
-                PERTURBATION_PROMPTS[args.perturbation_type]
-                .replace("{{sentence}}", sentence)
-            )
+
+            prompt = PROMPT_TEMPLATE.replace("{{sentence}}", sentence)
 
             messages = [
-                {"role": "system", "content": "Sei un assistente utile."},
-                {"role": "user", "content": prompt}
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
             ]
+
 
             inputs = tokenizer.apply_chat_template(
                 messages,
