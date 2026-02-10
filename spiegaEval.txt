@@ -36,4 +36,7 @@ un valore per ogni domanda/turno
 {"f1": 0.41428571428571426, "chrf": 64.24925313842857, "bleu": 36.930894846795944, "sbert_similarity": 0.8651445955038071, "em": false}]]}
 
 
+il terzo fa una media normale tra i tre turni
+
+
 
