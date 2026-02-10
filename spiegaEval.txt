@@ -38,5 +38,7 @@ un valore per ogni domanda/turno
 
 il terzo fa una media normale tra i tre turni
 
+l'ultimo combina con gli scoreOriginal facnedo una media standard
+
 
 
