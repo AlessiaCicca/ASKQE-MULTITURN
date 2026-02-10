@@ -1,0 +1,10 @@
+language,perturbation,cosine_similarity,num_comparison
+italian,alteration,0.5820609556092962,2437
+italian,expansion_impact,0.6308038917108206,1680
+italian,omission,0.6203900781688154,2434
+french,alteration,0.5791278511637579,2464
+french,expansion_impact,0.6566923057272189,2473
+french,omission,0.632159745392009,2435
+spanish,alteration,0.5834792435064897,2455
+spanish,expansion_impact,0.6349831525303674,2463
+spanish,omission,0.6759980574306177,2455
