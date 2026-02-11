@@ -21,7 +21,6 @@ def classify_with_gmm(input_jsonl, output_jsonl, metric):
         for line in f:
             entry = json.loads(line)
             if "scores" in entry and len(entry["scores"]) > 0:
-                # Calcola la media della metrica da tutti gli scores
                 metric_scores = [s[metric] for s in entry["scores"] if metric in s]
                 if metric_scores:
                     avg_metric = np.mean(metric_scores)
