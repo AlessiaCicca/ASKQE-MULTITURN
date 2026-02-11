@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 from datasets import load_dataset
 import spacy
 import json
@@ -9,9 +7,15 @@ import re
 import argparse
 
 
-# =========================
-# CLEANING UTILITIES
-# =========================
+#Downloads scientific abstracts from PubMed
+#Cleans them (removes section headers like “Methods:” or “Results:”, fixes
+#formatting, removes very short/noisy sentences) since by construction PubMed's abstracts
+#have this structure.
+#Splits them into sentences
+#Groups every 3 consecutive sentences into a short paragraph
+#Randomly selects 500 of these paragraphs
+#Saves them into a JSONL file with an incremental ID
+
 
 HEADER_PATTERN = re.compile(
     r"(?:(?<=^)|(?<=[\.\n]))\s*[A-Za-z][A-Za-z\s\-]{0,20}\s*:\s*",
@@ -24,20 +28,11 @@ ATTACHED_HEADER_PATTERN = re.compile(
 )
 
 def cleaning(text: str, nlp):
-    # normalize whitespace
     text = re.sub(r"\s+", " ", text).strip()
-
-    # fix attached headers
     text = ATTACHED_HEADER_PATTERN.sub(r". \1", text)
-
-    # remove inline headers
     text = HEADER_PATTERN.sub("", text)
-
-    # sentence splitting
     doc = nlp(text)
     sentences = [s.text.strip() for s in doc.sents if s.text.strip()]
-
-    # remove trailing standalone headers
     cleaned = []
     for s in sentences:
         t = s.lower().strip(" .:")
@@ -48,50 +43,35 @@ def cleaning(text: str, nlp):
     return cleaned
 
 
-# =========================
-# MAIN
-# =========================
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--output",
-        default="pubmed_mt_askqe_2000.jsonl",
-        help="Path to output JSONL file"
-    )
+        default="pubmed_mt_askqe_2000.jsonl")
     args = parser.parse_args()
 
-    # =========================
-    # FIXED CONFIG
-    # =========================
+
     DATASET_NAME = "ccdv/pubmed-summarization"
     SPLIT = "train"
-    MAX_ABSTRACTS = 5000
-    MAX_CONTEXTS = 2000
+    MAX_ABSTRACTS = 2000
+    MAX_CONTEXTS = 500
     K = 3
     SEED = 42
 
     random.seed(SEED)
 
-    # =========================
-    # LOAD NLP
-    # =========================
+
     nlp = spacy.load(
         "en_core_sci_sm",
         disable=["ner", "parser", "lemmatizer"]
     )
     nlp.add_pipe("sentencizer")
-
-    # =========================
-    # LOAD DATASET
-    # =========================
+    
     dataset = load_dataset(DATASET_NAME, split=SPLIT)
 
-    # =========================
-    # PROCESS ABSTRACTS
-    # =========================
-    records = []
 
+    records = []
     for doc_id in tqdm(range(MAX_ABSTRACTS), desc="Processing abstracts"):
         abstract = dataset[doc_id].get("abstract", "")
         if not abstract:
@@ -116,9 +96,7 @@ def main():
             f"Only {len(records)} contexts available, less than {MAX_CONTEXTS}"
         )
 
-    # =========================
-    # SAMPLE + ASSIGN IDS
-    # =========================
+    # We apply random sampling to improve the consistency and reliability of the selected contexts.
     records = random.sample(records, MAX_CONTEXTS)
 
     final_records = []
@@ -128,9 +106,7 @@ def main():
             "src": r["context"]
         })
 
-    # =========================
-    # SAVE
-    # =========================
+
     with open(args.output, "w", encoding="utf-8") as fout:
         for r in final_records:
             fout.write(json.dumps(r) + "\n")
@@ -140,3 +116,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
