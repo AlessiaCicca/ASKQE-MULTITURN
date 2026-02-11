@@ -4,9 +4,21 @@ import torch
 from transformers import AutoTokenizer, AutoModel
 import argparse
 
+
+#First, for File 1, it applies a weighted average (70/30) across three QA-based metric pairs
+#within each question group. Specifically, for each question and turn:
+#0.3 x ( sim(question_follow_up_question) + sim(answer_src_follow_up_question))/2 + 0.7 x follow_up_response_follow_up_response_bt
+#As consequence, we have a unique value for each question and turn.
+    
+#Second, it computes the average of these weighted scores across turns:
+#A unique value for each question.
+              
+#Third, it combines the processed File 1 with File 2 (with answer similarity of the OriginalCode)
+
+
+
 nltk.download("punkt")
 
-# Setup SBERT model
 tokenizer_sbert = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
 model_sbert = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
 
@@ -16,7 +28,6 @@ def mean_pooling(model_output, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 def compute_sbert_similarity(ans_src, ans_bt):
-    #print(f"Calcolando similitudine SBERT per: {ans_src[:50]}... vs {ans_bt[:50]}...")  # Debug
     encoded_src = tokenizer_sbert(ans_src, padding=True, truncation=True, return_tensors='pt')
     encoded_bt = tokenizer_sbert(ans_bt, padding=True, truncation=True, return_tensors='pt')
     
@@ -31,26 +42,16 @@ def compute_sbert_similarity(ans_src, ans_bt):
     #print(f"Similitudine coseno: {cos_sim}")  # Debug
     return cos_sim
 
-# ========== STEP 1: Weighted Average (70/30) - SOLO FILE 1 ==========
 
 def calculate_weighted_average(question_group):
-    """
-    Calcola le metriche con media ponderata 70/30.
-    Formula: risultato = (media × 0.3) + (pair3 × 0.7)
-    """
-    #print(f"Calcolando media ponderata per group di {len(question_group)} pair")  # Debug
-    
     pairs = {}
     for item in question_group:
         pairs[item['pair']] = item
     
-    # Verifica che ci siano esattamente 3 pair
+
     if len(pairs) != 3:
-        print(f"ATTENZIONE: Trovati {len(pairs)} pair invece di 3")  # Debug
-        print(f"Pair disponibili: {list(pairs.keys())}")  # Debug
-        raise ValueError(f"Numero di pair errato: {len(pairs)}")
+        raise ValueError(f"Number of pair uncorrect: {len(pairs)}")
     
-    # Estrai i tre pair - usa i nomi esatti dal tuo file
     pair_names = list(pairs.keys())
     pair1 = pairs[pair_names[0]]  # question_follow_up_question
     pair2 = pairs[pair_names[1]]  # answer_src_follow_up_question
@@ -74,15 +75,12 @@ def calculate_weighted_average(question_group):
     avg_sbert = (pair1['sbert_similarity'] + pair2['sbert_similarity']) / 2
     result['sbert_similarity'] = (avg_sbert * 0.3) + (pair3['sbert_similarity'] * 0.7)
     
-    # EM (exact match) - usa AND logico
+    # EM (exact match) 
     result['em'] = pair1['em'] and pair2['em'] and pair3['em']
     
-    #print(f"Media ponderata calcolata: {result}")  # Debug
     return result
 
 def process_weighted_average(input_file, output_file):
-    """STEP 1: Calcola la media ponderata per ogni turno - SOLO FILE 1"""
-    print(f"Caricamento dati da: {input_file}")  # Debug
     with open(input_file, 'r', encoding='utf-8') as f:
         data = [json.loads(line) for line in f]
     
@@ -95,44 +93,33 @@ def process_weighted_average(input_file, output_file):
         }
         
         for turn_idx, turn in enumerate(item['turns']):
-            #print(f"Elaborando turno {turn_idx} per ID {item['id']}")  # Debug
             turn_results = []
             for question_idx, question_group in enumerate(turn):
                 try:
                     weighted_avg = calculate_weighted_average(question_group)
                     turn_results.append(weighted_avg)
                 except Exception as e:
-                    print(f"\nErrore in id={item['id']}, turn={turn_idx}, question={question_idx}")
-                    print(f"Question group: {question_group}")
+                    print(f"\nError in id={item['id']}, turn={turn_idx}, question={question_idx}")
                     raise e
             
             result_item['turns'].append(turn_results)
         
         results.append(result_item)
-    
-    print(f"Scrivendo il risultato su: {output_file}")  # Debug
+
     with open(output_file, 'w', encoding='utf-8') as f:
         for result in results:
             f.write(json.dumps(result, ensure_ascii=False) + "\n")
-    
-    print(f"✓ Step 1 completato: {output_file}")
     return output_file
 
-# ========== STEP 2: Average Across Turns - SOLO FILE 1 ==========
+
 
 def calculate_average(metrics_list):
-    """Calcola la media delle metriche per una domanda nei vari turni"""
-    #print(f"Calcolando la media delle metriche per {len(metrics_list)} turni")  # Debug
     avg_metrics = {}
-    
     for metric in metrics_list[0].keys():
-        avg_metrics[metric] = sum(item[metric] for item in metrics_list) / len(metrics_list)
-    
+        avg_metrics[metric] = sum(item[metric] for item in metrics_list) / len(metrics_list) 
     return avg_metrics
 
 def process_turns(turn_data):
-    """Calcola la media per ogni metrica di ogni domanda nei turni"""
-    #print(f"Elaborando {len(turn_data)} turni per calcolare la media")  # Debug
     results = []
     num_questions = len(turn_data[0])
     
@@ -147,9 +134,8 @@ def process_turns(turn_data):
     
     return results
 
+
 def process_turn_average(input_file, output_file):
-    """STEP 2: Calcola la media attraverso i turni - SOLO FILE 1"""
-    #print(f"Caricamento dati da: {input_file}")  # Debug
     combined_data = []
     
     with open(input_file, 'r', encoding='utf-8') as f:
@@ -170,29 +156,22 @@ def process_turn_average(input_file, output_file):
             except json.JSONDecodeError as e:
                 print(f"Errore nel leggere la riga: {e}")
                 continue
-    
-    print(f"Scrivendo il risultato su: {output_file}")  # Debug
+
     with open(output_file, 'w', encoding='utf-8') as f:
         for item in combined_data:
             json.dump(item, f, ensure_ascii=False)
             f.write("\n")
-    
-    print(f"✓ Step 2 completato: {output_file}")
+
     return output_file
 
-# ========== STEP 3: Combine Two Files ==========
 
 def calculate_file_average(metrics1, metrics2):
-    """Calcola la media tra le metriche di due set di dati"""
-    #print(f"Calcolando la media tra i set di dati: {metrics1} vs {metrics2}")  # Debug
     averaged_metrics = {}
     for key in metrics1.keys():
         averaged_metrics[key] = (metrics1[key] + metrics2[key]) / 2
     return averaged_metrics
 
 def combine_files(input_file1, input_file2, output_file):
-    """STEP 3: Combina due file calcolando la media delle metriche"""
-   # print(f"Caricamento dati da FILE 1: {input_file1} e FILE 2: {input_file2}")  # Debug
     combined_data = []
     
     with open(input_file1, 'r', encoding='utf-8') as file1, open(input_file2, 'r', encoding='utf-8') as file2:
