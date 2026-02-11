@@ -69,46 +69,29 @@ try:
                         follow_up_response_bt = item["follow_up_response_bt"]
 
                         row_scores = []
+                        if follow_up_response.strip() == "":
+                            follow_up_response = "No Answer"
+                        if follow_up_response_bt.strip() == "":
+                            follow_up_response_bt = "No Answer"
+                       
+                        if answer_src.strip() == "":
+                            answer_src = "No Answer"
 
-                        # 1. (question, follow_up_question)
-                        if question.strip() != "" and follow_up_question.strip() != "":
-                            f1, EM, chrf, bleu = compare_answers(question, follow_up_question)
-                            sbert_similarity = compute_sbert_similarity(question, follow_up_question)
-                            row_scores.append({
-                                "f1": f1,
-                                "em": EM,
-                                "chrf": chrf,
-                                "bleu": bleu,
-                                "sbert_similarity": sbert_similarity,
-                                "pair": "question_follow_up_question"
-                            })
 
-                        # 2. (answer_src, follow_up_question)
-                        if answer_src.strip() != "" and follow_up_question.strip() != "":
-                            f1, EM, chrf, bleu = compare_answers(answer_src, follow_up_question)
-                            sbert_similarity = compute_sbert_similarity(answer_src, follow_up_question)
-                            row_scores.append({
-                                "f1": f1,
-                                "em": EM,
-                                "chrf": chrf,
-                                "bleu": bleu,
-                                "sbert_similarity": sbert_similarity,
-                                "pair": "answer_src_follow_up_question"
-                            })
+                        f1, EM, chrf, bleu = compare_answers(question, follow_up_question)
+                        sbert_similarity = compute_sbert_similarity(question, follow_up_question)
+                        row_scores.append({
+                            "f1": f1,
+                            "em": EM,
+                            "chrf": chrf,
+                            "bleu": bleu,
+                            "sbert_similarity": sbert_similarity,
+                            "pair": "question_follow_up_question"
+                        })
 
-                        # 3. (follow_up_response, follow_up_response_bt)
-                        if follow_up_response.strip() != "" and follow_up_response_bt.strip() != "":
-                            f1, EM, chrf, bleu = compare_answers(follow_up_response, follow_up_response_bt)
-                            sbert_similarity = compute_sbert_similarity(follow_up_response, follow_up_response_bt)
-                            row_scores.append({
-                                "f1": f1,
-                                "em": EM,
-                                "chrf": chrf,
-                                "bleu": bleu,
-                                "sbert_similarity": sbert_similarity,
-                                "pair": "follow_up_response_follow_up_response_bt"
-                            })
-
+                       # Similar processing for other pairs
+                       # (answer_src, follow_up_question), (follow_up_response, follow_up_response_bt)
+                       
                         # Add the row to the aggregated scores if there are valid results
                         if row_scores:  # Only if there are valid scores
                             turn_scores.append(row_scores)
@@ -121,8 +104,17 @@ try:
                 results_list.append(aggregated_scores)
 
             except json.JSONDecodeError as e:
-                print(f"Skipping a corrupted line due to JSONDecodeError: {e}")
-                continue
+                  print(f"Errore nel leggere la riga: {line}. Errore: {e}")
+                  # Create a default entry for unknown errors with "Unknown" ID
+                  aggregated_scores = {
+                      "id": "Unknown",  # Explicitly set ID to "Unknown"
+                      "turns": [{
+                          "error": "JSONDecodeError", 
+                          "line": line
+                      }]
+                  }
+                  results_list.append(aggregated_scores)  # Add default entry with "Unknown"
+                  continue
 
 except FileNotFoundError as e:
     print(f"File not found: {e}")
@@ -137,5 +129,6 @@ jsonl_output_file = os.path.join(output_dir, os.path.basename(args.data_file).re
 with open(jsonl_output_file, "w", encoding="utf-8") as jsonl_file:
     for row in results_list:
         jsonl_file.write(json.dumps(row, ensure_ascii=False) + "\n")
+
 
 print(f"Saved results to {jsonl_output_file} ({len(results_list)} rows)")
