@@ -5,10 +5,6 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import gc, os
 
 
-# =========================
-# LOAD MODEL
-# =========================
-
 def load_model(model_name, device):
     print(f"[LOAD] {model_name}")
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -23,9 +19,6 @@ def free_model(model, tokenizer):
     torch.cuda.empty_cache()
     gc.collect()
 
-# ==================================
-#  TRANSLATION FUNCTION (using NLLB)
-# ==================================
 
 def translate_nllb(text, tokenizer, model, source_language, target_language,device):
     tokenizer.src_lang = f"{source_language}_Latn" 
@@ -54,9 +47,7 @@ def translate_nllb(text, tokenizer, model, source_language, target_language,devi
     return tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]
 
 
-# =========================
-# LOAD DATA
-# =========================
+
 
 def load_data(path):
     print(f"[STEP] Loading dataset: {path}")
@@ -71,9 +62,7 @@ def load_data(path):
             data = [json.loads(line) for line in f if line.strip()]
             print(f"[OK] JSONL with {len(data)} samples")
             return data
-# =========================
-# SAVE DATA
-# =========================
+
 def save_results(data, output_path):
     print(f"[INFO] Saving results to {output_path}")
     with open(output_path, "w", encoding="utf-8") as fout:
@@ -83,11 +72,11 @@ def save_results(data, output_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Translate text using NLLB model")
-    parser.add_argument('--input_path', type=str, required=True, help="Input path for the data")
-    parser.add_argument('--output_path', type=str, required=True, help="Output path for the full dataset (original + translated)")
-    parser.add_argument('--source_language', type=str, default="eng", help="Source language (default is English)")
-    parser.add_argument('--target_language', type=str, default="ita", help="Target language (default is Italian)")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--input_path', type=str, required=True)
+    parser.add_argument('--output_path', type=str, required=True)
+    parser.add_argument('--source_language', type=str, default="eng")
+    parser.add_argument('--target_language', type=str, default="ita")
     args = parser.parse_args()
 
     output_dir = os.path.dirname(args.output_path)
@@ -95,16 +84,12 @@ def main():
         os.makedirs(output_dir, exist_ok=True)
 
 
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
-
 
     model_name = "facebook/nllb-200-distilled-600M"
     tokenizer, model = load_model(model_name,device)
 
-
     data_list = load_data(args.input_path)
-
    
     for idx, ex in enumerate(data_list, start=1):
         src = ex.get("src", None)
@@ -124,3 +109,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
