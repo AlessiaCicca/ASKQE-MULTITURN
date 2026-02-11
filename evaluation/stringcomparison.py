@@ -4,6 +4,10 @@ import argparse
 import csv
 from utils import compare_answers
 
+
+#This script computes the average F1, EM, BLEU and CHRF between answers_src and
+#answers_bt across all language–perturbation combinations
+
 nltk.download("punkt")
 
 parser = argparse.ArgumentParser()
@@ -86,3 +90,4 @@ with open(args.output_file, mode="w", newline="", encoding="utf-8") as csvfile:
 
             else:
                 print("No valid comparisons found in the JSONL file.")
+
