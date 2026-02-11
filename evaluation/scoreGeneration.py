@@ -7,7 +7,9 @@ import os
 
 nltk.download("punkt")
 
-# Setup SBERT model
+#This script generates a new JSONL file where each question pair (answers_src vs answers_bt) 
+#is assigned evaluation metrics.
+    
 tokenizer_sbert = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
 model_sbert = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
 
