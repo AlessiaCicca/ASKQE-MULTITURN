@@ -7,6 +7,9 @@ from transformers import AutoTokenizer, AutoModel
 import torch.nn.functional as F
 
 
+#This script computes the average SBERT cosine similarity between answers_src and
+#answers_bt across all language–perturbation combinations
+
 def mean_pooling(model_output, attention_mask):
     token_embeddings = model_output[0]
     input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
@@ -102,3 +105,4 @@ with open(args.output_file, mode="w", newline="", encoding="utf-8") as csvfile:
 
             else:
                 print("No valid comparisons found in the JSONL file.")
+
