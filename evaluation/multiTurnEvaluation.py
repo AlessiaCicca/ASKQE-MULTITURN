@@ -5,9 +5,11 @@ from transformers import AutoTokenizer, AutoModel
 from utils import compare_answers
 import os
 
+#This script computes evaluation metrics for the entire multi-turn dataset 
+#contained in the input JSONL file.
+
 nltk.download("punkt")
 
-# Setup SBERT model
 tokenizer_sbert = AutoTokenizer.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
 model_sbert = AutoModel.from_pretrained('sentence-transformers/all-MiniLM-L6-v2')
 
@@ -17,31 +19,26 @@ def mean_pooling(model_output, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 def compute_sbert_similarity(ans_src, ans_bt):
-    # Tokenize the source and back-translated answers
     encoded_src = tokenizer_sbert(ans_src, padding=True, truncation=True, return_tensors='pt')
     encoded_bt = tokenizer_sbert(ans_bt, padding=True, truncation=True, return_tensors='pt')
-
-    # Get embeddings from SBERT model
     with torch.no_grad():
         src_output = model_sbert(**encoded_src)
         bt_output = model_sbert(**encoded_bt)
 
-    # Compute mean pooled embeddings
     src_embed = mean_pooling(src_output, encoded_src['attention_mask'])
     bt_embed = mean_pooling(bt_output, encoded_bt['attention_mask'])
-
-    # Calculate cosine similarity
+    
     cos_sim = torch.nn.functional.cosine_similarity(src_embed, bt_embed, dim=1).item()
     return cos_sim
 
-# Parsing arguments
+
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_file", type=str, required=True)
-parser.add_argument("--input_file", type=str, required=True)  # Now taking one data file
+parser.add_argument("--input_file", type=str, required=True)  
 args = parser.parse_args()
 
-# Results storage
+
 results_list = []
 
 try:
@@ -50,13 +47,12 @@ try:
             try:
                 data = json.loads(line)
 
-                # Aggregated results for the current `id`
                 aggregated_scores = {
                     "id": data["id"],
-                    "turns": []  # List to hold each turn's scores
+                    "turns": [] 
                 }
 
-                # Process all the turns (questions) and compute the metrics
+             
                 for turn in data["multiturn"].values():
                     turn_scores = []
 
@@ -77,7 +73,7 @@ try:
                         if answer_src.strip() == "":
                             answer_src = "No Answer"
 
-                        # Process pairs
+                       
                         f1, EM, chrf, bleu = compare_answers(question, follow_up_question)
                         sbert_similarity = compute_sbert_similarity(question, follow_up_question)
                         row_scores.append({
@@ -144,13 +140,10 @@ except FileNotFoundError as e:
     print(f"File not found: {e}")
     exit(1)
 
-output_dir = os.path.dirname(args.output_file)  # Extract the directory from output_file
-os.makedirs(output_dir, exist_ok=True)  # Create the directory if it doesn't exist
-
-# Write the results to the output file
+output_dir = os.path.dirname(args.output_file) 
+os.makedirs(output_dir, exist_ok=True)  
 with open(args.output_file, "w", encoding="utf-8") as jsonl_file:
     for row in results_list:
         jsonl_file.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-# Print a message confirming the results were saved
 print(f"Saved results to {args.output_file} ({len(results_list)} rows)")
