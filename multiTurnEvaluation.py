@@ -38,14 +38,14 @@ def compute_sbert_similarity(ans_src, ans_bt):
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--output_file", type=str, required=True)
-parser.add_argument("--data_file", type=str, required=True)  # Now taking one data file
+parser.add_argument("--input_file", type=str, required=True)  # Now taking one data file
 args = parser.parse_args()
 
 # Results storage
 results_list = []
 
 try:
-    with open(args.data_file, "r", encoding="utf-8") as file:
+    with open(args.input_file, "r", encoding="utf-8") as file:
         for line in file:
             try:
                 data = json.loads(line)
@@ -77,7 +77,7 @@ try:
                         if answer_src.strip() == "":
                             answer_src = "No Answer"
 
-
+                        # Process pairs
                         f1, EM, chrf, bleu = compare_answers(question, follow_up_question)
                         sbert_similarity = compute_sbert_similarity(question, follow_up_question)
                         row_scores.append({
@@ -89,9 +89,33 @@ try:
                             "pair": "question_follow_up_question"
                         })
 
-                       # Similar processing for other pairs
-                       # (answer_src, follow_up_question), (follow_up_response, follow_up_response_bt)
-                       
+                        f1, EM, chrf, bleu = compare_answers(answer_src, follow_up_question)
+                        sbert_similarity = compute_sbert_similarity(answer_src, follow_up_question)
+                        row_scores.append({
+                            "f1": f1,
+                            "em": EM,
+                            "chrf": chrf,
+                            "bleu": bleu,
+                            "sbert_similarity": sbert_similarity,
+                            "pair": "answer_src_follow_up_question"
+                        })
+
+                        f1, EM, chrf, bleu = compare_answers(follow_up_response, follow_up_response_bt)
+                        sbert_similarity = compute_sbert_similarity(follow_up_response, follow_up_response_bt)
+                        row_scores.append({
+                            "f1": f1,
+                            "em": EM,
+                            "chrf": chrf,
+                            "bleu": bleu,
+                            "sbert_similarity": sbert_similarity,
+                            "pair": "follow_up_response_follow_up_response_bt"
+                        })
+
+                        # Check the number of pairs for this turn
+                        if len(row_scores) < 3:
+                            print(f"Warning: Less than 3 pairs for id: {data['id']}, question_id: {question_id}")
+                            print(f"Generated pairs: {len(row_scores)}")
+
                         # Add the row to the aggregated scores if there are valid results
                         if row_scores:  # Only if there are valid scores
                             turn_scores.append(row_scores)
@@ -120,15 +144,13 @@ except FileNotFoundError as e:
     print(f"File not found: {e}")
     exit(1)
 
-# Create the output directory if it doesn't exist
-output_dir = "output_results"
-os.makedirs(output_dir, exist_ok=True)
+output_dir = os.path.dirname(args.output_file)  # Extract the directory from output_file
+os.makedirs(output_dir, exist_ok=True)  # Create the directory if it doesn't exist
 
-# Output file path
-jsonl_output_file = os.path.join(output_dir, os.path.basename(args.data_file).replace(".jsonl", "_results.jsonl"))
-with open(jsonl_output_file, "w", encoding="utf-8") as jsonl_file:
+# Write the results to the output file
+with open(args.output_file, "w", encoding="utf-8") as jsonl_file:
     for row in results_list:
         jsonl_file.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-
-print(f"Saved results to {jsonl_output_file} ({len(results_list)} rows)")
+# Print a message confirming the results were saved
+print(f"Saved results to {args.output_file} ({len(results_list)} rows)")
