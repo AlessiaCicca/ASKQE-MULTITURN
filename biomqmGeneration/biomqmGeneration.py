@@ -3,6 +3,10 @@ import json
 import sys
 
 
+# This script restructures segment-level machine translation data into grouped 3-segment document-level 
+# examples with aligned references, producing a JSONL file suitable for contextual MT evaluation.
+
+
 def process_translation(mtc_file, ref1_file, ref2_file, output_file):
     # =========================
     # LOAD JSON FILES
@@ -148,3 +152,4 @@ if __name__ == "__main__":
         reference_file2,
         output_file
     )
+
