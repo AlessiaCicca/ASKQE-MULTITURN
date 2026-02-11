@@ -6,9 +6,6 @@ from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 import gc
 
 
-# =========================
-# LOAD MODEL
-# =========================
 
 def load_model(model_name, device):
     print(f"[LOAD] {model_name}")
@@ -39,10 +36,6 @@ def backtranslate_nllb(
     target_language,
     device
 ):
-    """
-    Back-translate text using NLLB.
-    Example: IT -> EN
-    """
 
     tokenizer.src_lang = f"{source_language}_Latn"
 
@@ -72,9 +65,6 @@ def backtranslate_nllb(
     return tokenizer.batch_decode(outputs, skip_special_tokens=True)[0]
 
 
-# =========================
-# LOAD DATA
-# =========================
 
 def load_data(path):
     print(f"[STEP] Loading dataset: {path}")
@@ -91,9 +81,6 @@ def load_data(path):
             return data
 
 
-# =========================
-# SAVE DATA
-# =========================
 
 def save_results(data, output_path):
     print(f"[INFO] Saving results to {output_path}")
@@ -103,53 +90,34 @@ def save_results(data, output_path):
     print(" BACK-TRANSLATION COMPLETED SUCCESSFULLY!")
 
 
-# =========================
-# MAIN
-# =========================
-
 def main():
     parser = argparse.ArgumentParser(description="Back-translation using NLLB")
     parser.add_argument("--input_path", type=str, required=True)
     parser.add_argument("--output_path", type=str, required=True)
-    parser.add_argument("--source_language", type=str, default="ita",
-                        help="Source language (default: ita)")
-    parser.add_argument("--target_language", type=str, default="eng",
-                        help="Target language (default: eng)")
+    parser.add_argument("--source_language", type=str, default="ita")
+    parser.add_argument("--target_language", type=str, default="eng")
+    
     parser.add_argument(
         "--input_field",
         type=str,
-        default="pert_mt",
-        help="Field to back-translate (default: pert_mt)"
-    )
+        default="pert_mt")
     args = parser.parse_args()
 
-    # =========================
-    # DEVICE
-    # =========================
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"[INFO] Using device: {device}")
 
-    # =========================
-    # OUTPUT DIR
-    # =========================
     output_dir = os.path.dirname(args.output_path)
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
-    # =========================
-    # LOAD MODEL
-    # =========================
     model_name = "facebook/nllb-200-distilled-600M"
     tokenizer, model = load_model(model_name, device)
 
-    # =========================
-    # LOAD DATA
-    # =========================
+
     data_list = load_data(args.input_path)
 
-    # =========================
-    # BACK-TRANSLATION LOOP
-    # =========================
+
     for idx, ex in enumerate(data_list, start=1):
         text = ex.get(args.input_field)
         if not text:
@@ -169,12 +137,11 @@ def main():
         else:
             print(f"  [{idx}/{len(data_list)}] BT: {ex['bt'][:70]}...")
 
-    # =========================
-    # SAVE & CLEANUP
-    # =========================
+
     save_results(data_list, args.output_path)
     free_model(model, tokenizer)
 
 
 if __name__ == "__main__":
     main()
+
