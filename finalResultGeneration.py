@@ -16,7 +16,7 @@ def mean_pooling(model_output, attention_mask):
     return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
 def compute_sbert_similarity(ans_src, ans_bt):
-    print(f"Calcolando similitudine SBERT per: {ans_src[:50]}... vs {ans_bt[:50]}...")  # Debug
+    #print(f"Calcolando similitudine SBERT per: {ans_src[:50]}... vs {ans_bt[:50]}...")  # Debug
     encoded_src = tokenizer_sbert(ans_src, padding=True, truncation=True, return_tensors='pt')
     encoded_bt = tokenizer_sbert(ans_bt, padding=True, truncation=True, return_tensors='pt')
     
@@ -28,7 +28,7 @@ def compute_sbert_similarity(ans_src, ans_bt):
     bt_embed = mean_pooling(bt_output, encoded_bt['attention_mask'])
     
     cos_sim = torch.nn.functional.cosine_similarity(src_embed, bt_embed, dim=1).item()
-    print(f"Similitudine coseno: {cos_sim}")  # Debug
+    #print(f"Similitudine coseno: {cos_sim}")  # Debug
     return cos_sim
 
 # ========== STEP 1: Weighted Average (70/30) - SOLO FILE 1 ==========
@@ -38,7 +38,7 @@ def calculate_weighted_average(question_group):
     Calcola le metriche con media ponderata 70/30.
     Formula: risultato = (media × 0.3) + (pair3 × 0.7)
     """
-    print(f"Calcolando media ponderata per group di {len(question_group)} pair")  # Debug
+    #print(f"Calcolando media ponderata per group di {len(question_group)} pair")  # Debug
     
     pairs = {}
     for item in question_group:
@@ -77,7 +77,7 @@ def calculate_weighted_average(question_group):
     # EM (exact match) - usa AND logico
     result['em'] = pair1['em'] and pair2['em'] and pair3['em']
     
-    print(f"Media ponderata calcolata: {result}")  # Debug
+    #print(f"Media ponderata calcolata: {result}")  # Debug
     return result
 
 def process_weighted_average(input_file, output_file):
@@ -95,7 +95,7 @@ def process_weighted_average(input_file, output_file):
         }
         
         for turn_idx, turn in enumerate(item['turns']):
-            print(f"Elaborando turno {turn_idx} per ID {item['id']}")  # Debug
+            #print(f"Elaborando turno {turn_idx} per ID {item['id']}")  # Debug
             turn_results = []
             for question_idx, question_group in enumerate(turn):
                 try:
@@ -122,7 +122,7 @@ def process_weighted_average(input_file, output_file):
 
 def calculate_average(metrics_list):
     """Calcola la media delle metriche per una domanda nei vari turni"""
-    print(f"Calcolando la media delle metriche per {len(metrics_list)} turni")  # Debug
+    #print(f"Calcolando la media delle metriche per {len(metrics_list)} turni")  # Debug
     avg_metrics = {}
     
     for metric in metrics_list[0].keys():
@@ -132,7 +132,7 @@ def calculate_average(metrics_list):
 
 def process_turns(turn_data):
     """Calcola la media per ogni metrica di ogni domanda nei turni"""
-    print(f"Elaborando {len(turn_data)} turni per calcolare la media")  # Debug
+    #print(f"Elaborando {len(turn_data)} turni per calcolare la media")  # Debug
     results = []
     num_questions = len(turn_data[0])
     
@@ -149,7 +149,7 @@ def process_turns(turn_data):
 
 def process_turn_average(input_file, output_file):
     """STEP 2: Calcola la media attraverso i turni - SOLO FILE 1"""
-    print(f"Caricamento dati da: {input_file}")  # Debug
+    #print(f"Caricamento dati da: {input_file}")  # Debug
     combined_data = []
     
     with open(input_file, 'r', encoding='utf-8') as f:
@@ -184,7 +184,7 @@ def process_turn_average(input_file, output_file):
 
 def calculate_file_average(metrics1, metrics2):
     """Calcola la media tra le metriche di due set di dati"""
-    print(f"Calcolando la media tra i set di dati: {metrics1} vs {metrics2}")  # Debug
+    #print(f"Calcolando la media tra i set di dati: {metrics1} vs {metrics2}")  # Debug
     averaged_metrics = {}
     for key in metrics1.keys():
         averaged_metrics[key] = (metrics1[key] + metrics2[key]) / 2
@@ -192,7 +192,7 @@ def calculate_file_average(metrics1, metrics2):
 
 def combine_files(input_file1, input_file2, output_file):
     """STEP 3: Combina due file calcolando la media delle metriche"""
-    print(f"Caricamento dati da FILE 1: {input_file1} e FILE 2: {input_file2}")  # Debug
+   # print(f"Caricamento dati da FILE 1: {input_file1} e FILE 2: {input_file2}")  # Debug
     combined_data = []
     
     with open(input_file1, 'r', encoding='utf-8') as file1, open(input_file2, 'r', encoding='utf-8') as file2:
