@@ -1,0 +1,10 @@
+language,perturbation,avg_sbert_similarity,num_scores
+italian,alteration,0.5697760871687808,2437
+italian,expansion_impact,0.621161071760579,1680
+italian,omission,0.6079275636478405,2434
+french,alteration,0.5780293840072862,2464
+french,expansion_impact,0.6392372985704462,2473
+french,omission,0.6115619341038224,2435
+spanish,alteration,0.563142433950064,2455
+spanish,expansion_impact,0.6130967929652601,2468
+spanish,omission,0.6531266688015633,2455
