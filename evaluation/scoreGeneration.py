@@ -2,7 +2,7 @@ import json
 import nltk
 import torch
 from transformers import AutoTokenizer, AutoModel
-from utils import compare_answers
+from evaluation.utils import compare_answers
 import os
 
 nltk.download("punkt")
