@@ -1,30 +1,13 @@
-# =========================
-# ENV CLEANUP (NO WARNINGS)
-# =========================
-import os
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-# =========================
-# IMPORTS
-# =========================
 import torch
 import json
 import argparse
 import re
 from transformers import AutoTokenizer, AutoModelForCausalLM
-import difflib
 
-# =========================
-# MODEL
-# =========================
-# model_id = "Qwen/Qwen2.5-3B-Instruct"
+
 model_id = "Qwen/Qwen2.5-7B-Instruct"
 
 
-# =========================
-# LOAD PROMPT
-# =========================
 def load_prompt(prompt_path: str, prompt_key: str) -> str:
     if not os.path.exists(prompt_path):
         raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
@@ -46,9 +29,7 @@ def load_prompt(prompt_path: str, prompt_key: str) -> str:
 
 
 
-# =========================
-# MAIN
-# =========================
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_path", type=str, required=True)
@@ -57,11 +38,7 @@ def main():
     parser.add_argument("--prompt_key", type=str, required=True)
     args = parser.parse_args()
 
-    # =========================
-    # LOAD PROMPT
-    # =========================
     PROMPT_TEMPLATE = load_prompt(args.prompt_path, args.prompt_key) 
-
 
     if not os.path.isfile(args.input_path):
         print("[FATAL] Input file does not exist.")
@@ -89,9 +66,7 @@ def main():
     )
     model.eval()
 
-    # =========================
-    # PROCESS FILES
-    # =========================
+
     with open(args.input_path, "r", encoding="utf-8") as f_in, \
          open(args.output_path, "a", encoding="utf-8") as f_out:
 
@@ -142,7 +117,8 @@ def main():
             ).to(device)
 
             print(f"[DEBUG] input_ids shape: {inputs['input_ids'].shape}")
-
+            
+            # do_sample=True / temperature=0.25 /top_p=0.85 -> May make the dataset less artificial.
             with torch.no_grad():
                 outputs = model.generate(
                 input_ids=inputs["input_ids"],
@@ -154,7 +130,6 @@ def main():
                 temperature=0.25,
                 top_p=0.85
                 )
-
 
                 prompt_len = inputs["input_ids"].shape[-1]
                 response = outputs[0][prompt_len:]
@@ -168,13 +143,11 @@ def main():
                 data[out_field] = generated_text
 
              
-
                 print(f"[OK] {sent_id} | {out_field}")
                 print(generated_text)
                 print("-" * 80)
 
             f_out.write(json.dumps(data, ensure_ascii=False) + "\n")
-
 
 
 if __name__ == "__main__":
