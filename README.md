@@ -7,6 +7,8 @@ ASKQE-MULTITURN is a framework for evaluating machine translation quality throug
 
 Instead of relying solely on reference-based metrics, the framework leverages multi-turn Question Generation (QG) and Question Answering (QA) to iteratively probe semantic consistency between the source and the translated text. Through successive follow-up questions conditioned on previous answers, the system progressively explores deeper layers of meaning, contextual dependencies, and domain-specific information. This multi-turn structure enables a more comprehensive evaluation of translation adequacy, making it particularly suitable for high-stakes domains such as biomedical translation, where preserving semantic fidelity across contextual interactions is critical.
 
+![Overview of the ASKQE-MULTITURN system](multiturn.png)
+
 ---
 
 ## Core Idea
