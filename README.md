@@ -1,1 +1,192 @@
-# ASKQE
+# ASKQE-MULTITURN  
+## Multi-Turn QA-Based Framework for Machine Translation Evaluation in the Biomedical Domain
+
+### Description
+
+ASKQE-MULTITURN is a framework for evaluating machine translation quality through structured multi-turn question–answer interactions. Inspired by the AskQE paradigm (Ki, Duh and Carpuat), the system reformulates translation evaluation as an iterative QA process, where semantic consistency between source and translated texts is progressively probed through follow-up questions.
+
+Instead of relying solely on reference-based metrics, the framework leverages multi-turn Question Generation (QG) and Question Answering (QA) to iteratively probe semantic consistency between the source and the translated text. Through successive follow-up questions conditioned on previous answers, the system progressively explores deeper layers of meaning, contextual dependencies, and domain-specific information. This multi-turn structure enables a more comprehensive evaluation of translation adequacy, making it particularly suitable for high-stakes domains such as biomedical translation, where preserving semantic fidelity across contextual interactions is critical.
+
+---
+
+## Core Idea
+
+The framework evaluates translation quality through dialogue-driven semantic verification:
+
+1. Generate initial questions from the source text.
+2. Answer those questions using both the source and the translated text.
+3. Generate follow-up questions conditioned on previous QA pairs.
+4. Compare answers across turns to detect semantic divergence.
+5. Aggregate lexical and semantic metrics to estimate translation quality.
+
+The multi-turn structure enables deeper semantic probing than single-turn QA-based evaluation and increases sensitivity to subtle translation errors.
+
+---
+
+## Key Features
+
+- **Multi-Turn QA-Based Evaluation**  
+  Iteratively probes semantic consistency between source and translated texts through structured follow-up questions.
+
+- **Question Generation (QG)**  
+  Automatically generates initial and follow-up questions from source texts.
+
+- **Question Answering (QA)**  
+  Produces answers from both source and translated texts to measure alignment.
+
+- **Semantic Scoring**  
+  Computes lexical and semantic metrics (e.g., F1, ChrF, BLEU, SBERT similarity) across multiple turns.
+
+- **Perturbation-Based Stress Testing**  
+  Applies controlled translation perturbations to evaluate robustness and error sensitivity.
+
+- **Biomedical Domain Adaptation**  
+  Designed for biomedical corpora, ensuring terminology-aware semantic evaluation.
+
+- **Reference-Free Capability**  
+  Enables translation quality estimation without requiring human reference translations.
+
+---
+
+## Contribution
+
+ASKQE-MULTITURN extends the original AskQE framework by introducing iterative multi-turn QA interactions, allowing deeper semantic probing and improved detection of meaning distortions in specialized domains such as biomedical translation.
+
+## Project Structure
+
+```
+ASKQE-MULTITURN/
+├── biomqmGeneration/   # Module for biomedical dataset generation (from BioMQM)
+├── evaluation/         # Scripts and tools for evaluation
+├── results/            # Experiment results
+├── multiturn.py        # Multi-turn conversation management
+├── qg.py               # Question Generation
+├── qa.py               # Question Answering
+├── perturb.py          # Text perturbation
+├── translate.py        # Translation
+├── backtranslate.py    # Back-translation
+├── generateFile.py     # Module for biomedical dataset generation (from PubMed)
+├── prompt.json         # Prompt templates and configurations
+└── README.md           # This file
+```
+
+## Requirements
+
+- Python 3.8+
+- Python dependencies (to be installed with pip):
+  - transformers
+  - torch
+  - numpy
+  - pandas
+  - (other specific dependencies will be added)
+
+## Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/AlessiaCicca/ASKQE-MULTITURN.git
+cd ASKQE-MULTITURN
+
+# Install dependencies
+pip install -r requirements.txt  # (if available)
+```
+
+## Usage
+
+### Question Generation
+
+```python
+python qg.py --input <input_file> --output <output_file>
+```
+
+### Question Answering
+
+```python
+python qa.py --questions <questions_file> --context <context_file>
+```
+
+### Multi-turn Conversations
+
+```python
+python multiturn.py --config <configuration>
+```
+
+### Perturbation
+
+```python
+python perturb.py --input <input_file> --strategy <strategy>
+```
+
+### Translation
+
+```python
+python translate.py --input <input_file> --source_lang <source_language> --target_lang <target_language>
+```
+
+### Back-translation
+
+```python
+python backtranslate.py --input <input_file> --intermediate_lang <intermediate_language>
+```
+
+## Biomedical Generation
+
+The `biomqmGeneration` module is specialized for creating datasets in the biomedical domain. For more details, consult the specific documentation in the folder.
+
+## Evaluation
+
+Evaluation results are saved in the `results/` folder. The `evaluation/` module contains scripts for:
+
+- Evaluating the quality of generated questions
+- Evaluating answer accuracy
+- Multi-turn coherence metrics
+- Perturbation analysis
+
+## Configuration
+
+System prompts and configurations are defined in the `prompt.json` file. You can customize:
+
+- Templates for question generation
+- Instructions for the QA system
+- Parameters for perturbations
+- Supported languages for translation
+
+## Contributing
+
+Contributions are welcome! To contribute:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/NewFeature`)
+3. Commit your changes (`git commit -m 'Add NewFeature'`)
+4. Push to the branch (`git push origin feature/NewFeature`)
+5. Open a Pull Request
+
+## License
+
+[Specify project license]
+
+## Authors
+
+- Alessia Cicca - [AlessiaCicca](https://github.com/AlessiaCicca)
+
+## Citation
+
+If you use this code in your research, please cite:
+
+```bibtex
+@misc{askqe-multiturn,
+  author = {Cicca, Alessia},
+  title = {ASKQE-MULTITURN: Multi-turn Question Answering and Generation Framework},
+  year = {2025},
+  publisher = {GitHub},
+  url = {https://github.com/AlessiaCicca/ASKQE-MULTITURN}
+}
+```
+
+## Contact
+
+For questions, suggestions, or bug reports, please open an issue on GitHub or contact the authors.
+
+## Acknowledgments
+
+[Any acknowledgments to projects, libraries, or people who contributed]
