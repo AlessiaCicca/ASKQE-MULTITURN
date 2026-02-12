@@ -48,7 +48,7 @@ The multi-turn structure enables deeper semantic probing than single-turn QA-bas
 - **Reference-Free Capability**  
   Enables translation quality estimation without requiring human reference translations.
   
--**Multilingual Adaptability**
+- **Multilingual Adaptability**
 Suitable for multiple languages, thanks to back-translation (BT) methods. Specifically, it analyzes translations between English and Italian, Spanish, and French.
 
 ---
