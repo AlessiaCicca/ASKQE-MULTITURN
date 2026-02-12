@@ -7,10 +7,7 @@ import re
 
 MODEL_ID = "Qwen/Qwen2.5-3B-Instruct"
 
-
-# =========================
 # LOAD PROMPT
-# =========================
 def load_prompt(prompt_path: str, prompt_key: str) -> str:
     if not os.path.exists(prompt_path):
         raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
@@ -31,15 +28,9 @@ def load_prompt(prompt_path: str, prompt_key: str) -> str:
     return prompt
 
 
-# =========================
-# ROBUST JSON PARSER
-# =========================
+#The following strategies are designed to enforce that the model’s output is strictly formatted as a flat list of answers.
 def parse_model_output(text: str, num_questions: int, ex_id: str, which: str, debug: bool) -> list:
-    """
-    Parse model output with multiple fallback strategies.
-    Returns a list of exactly num_questions answers.
-    """
-    # Strategy 1: Try direct JSON parsing
+    # Strategy 1:
     try:
         parsed = json.loads(text)
         if isinstance(parsed, list) and len(parsed) == num_questions:
@@ -47,18 +38,14 @@ def parse_model_output(text: str, num_questions: int, ex_id: str, which: str, de
                 return [str(a) if a else "No Answer" for a in parsed]
     except:
         pass
-    
-    # Strategy 2: Try to extract from nested structures like [["a"], ["b"], ["c"]]
+    # Strategy 2:
     try:
         cleaned = text.strip()
         if '"], [' in cleaned or '], [' in cleaned or cleaned.startswith('[['):
-            # Extract all strings between quotes using regex
             matches = re.findall(r'"([^"]*)"', cleaned)
             
             if len(matches) >= num_questions:
                 return matches[:num_questions]
-            
-            # If regex didn't work, try to parse and flatten
             try:
                 parsed = json.loads(cleaned)
                 if isinstance(parsed, list):
@@ -72,28 +59,24 @@ def parse_model_output(text: str, num_questions: int, ex_id: str, which: str, de
                     if len(flattened) >= num_questions:
                         return flattened[:num_questions]
             except:
-                pass
-                
+                pass              
     except:
         pass
-    
-    # Strategy 3: Line-based fallback
+    # Strategy 3:
     lines = [
         re.sub(r"^\d+[\)\.\-]\s*", "", ln).strip()
         for ln in text.split("\n")
         if ln.strip() and ln.strip() not in ['[', ']', ',', '[]']
     ]
-    
     if len(lines) >= num_questions:
         return lines[:num_questions]
     
-    # Strategy 4: Complete failure - return No Answer for all
+    # Strategy 4:
     return ["No Answer"] * num_questions
 
 
-# =========================
-# ANSWER QUESTIONS
-# =========================
+
+#The original prompt is extended with an additional constraint-based instruction block to enforce that the model outputs a strictly formatted JSON list of answers.
 def answer_questions(
     tokenizer,
     model,
@@ -104,12 +87,6 @@ def answer_questions(
     ex_id=None,
     which=None,
 ):
-    """
-    Answer a list of questions given a sentence.
-    Always returns a list of answers with SAME length as questions.
-    """
-
-    # ---------- BUILD ENHANCED PROMPT ----------
     questions_json = json.dumps(questions, ensure_ascii=False)
 
     base_prompt = (
@@ -117,8 +94,6 @@ def answer_questions(
         .replace("{{sentence}}", sentence)
         .replace("{{questions}}", questions_json)
     )
-    
-    # Add strict formatting instructions
     enhanced_prompt = f"""{base_prompt}
 
 CRITICAL: You MUST return a valid JSON array with EXACTLY {len(questions)} string answers.
@@ -139,12 +114,13 @@ Rules:
 
 Your {len(questions)} answers:"""
 
+    
+
     messages = [
         {"role": "system", "content": "You are a helpful assistant that returns only valid JSON arrays."},
         {"role": "user", "content": enhanced_prompt},
     ]
 
-    # ---------- TOKENIZE ----------
     inputs = tokenizer.apply_chat_template(
         messages,
         add_generation_prompt=True,
@@ -152,7 +128,6 @@ Your {len(questions)} answers:"""
         padding=True,
     ).to(model.device)
 
-    # ---------- GENERATE ----------
     try:
         with torch.no_grad():
             outputs = model.generate(
@@ -160,7 +135,6 @@ Your {len(questions)} answers:"""
                 attention_mask=inputs.get("attention_mask"),
                 max_new_tokens=512,
                 do_sample=False,
-                temperature=0.0,
                 eos_token_id=tokenizer.eos_token_id,
                 pad_token_id=tokenizer.pad_token_id,
             )
@@ -173,10 +147,10 @@ Your {len(questions)} answers:"""
             skip_special_tokens=True
         ).strip()
 
-        # ---------- CLEAN OUTPUT ----------
-        text_clean = text.strip()
+        
 
-        # Remove code fences if present
+        # CLEAN OUTPUT
+        text_clean = text.strip()
         if text_clean.startswith("```"):
             lines = text_clean.split("\n")
             text_clean = "\n".join(lines[1:]) if len(lines) > 1 else ""
@@ -184,19 +158,13 @@ Your {len(questions)} answers:"""
             text_clean = text_clean.rsplit("```", 1)[0]
 
         text_clean = text_clean.strip()
-
-        # Normalize Python list → JSON list
         text_clean = text_clean.replace("'", '"')
-
-        # ---------- PARSE WITH ROBUST PARSER ----------
         answers = parse_model_output(text_clean, len(questions), ex_id, which, debug)
 
-        # ---------- FINAL VALIDATION ----------
         if len(answers) != len(questions):
             answers = answers[:len(questions)]
             answers += ["No Answer"] * (len(questions) - len(answers))
 
-        # Ensure all answers are strings
         answers = [
             str(a).strip() if a and str(a).strip() else "No Answer"
             for a in answers
@@ -211,9 +179,7 @@ Your {len(questions)} answers:"""
     return answers
 
 
-# =========================
-# MAIN
-# =========================
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_path", type=str, required=True)
@@ -299,7 +265,6 @@ def main():
                 skipped += 1
                 continue
 
-            # Process this example
             print(f"[{done+1}] Processing ID: {ex_id} ({len(questions)} questions)")
 
             data["answers_src"] = answer_questions(
@@ -322,7 +287,7 @@ def main():
                 print(f"[INFO] Reached max_examples={args.max_examples}")
                 break
 
-    print(f"\n✅ Completed: {done} processed, {skipped} skipped")
+    print(f"\nCompleted: {done} processed, {skipped} skipped")
 
 
 if __name__ == "__main__":
