@@ -45,6 +45,9 @@ The multi-turn structure enables deeper semantic probing than single-turn QA-bas
 
 - **Reference-Free Capability**  
   Enables translation quality estimation without requiring human reference translations.
+  
+-**Multilingual Adaptability**
+Suitable for multiple languages, thanks to back-translation (BT) methods. Specifically, it analyzes translations between English and Italian, Spanish, and French.
 
 ---
 
@@ -70,28 +73,18 @@ ASKQE-MULTITURN/
 └── README.md           # This file
 ```
 
-## Requirements
-
-- Python 3.8+
-- Python dependencies (to be installed with pip):
-  - transformers
-  - torch
-  - numpy
-  - pandas
-  - (other specific dependencies will be added)
-
-## Installation
-
-```bash
-# Clone the repository
-git clone https://github.com/AlessiaCicca/ASKQE-MULTITURN.git
-cd ASKQE-MULTITURN
-
-# Install dependencies
-pip install -r requirements.txt  # (if available)
-```
 
 ## Usage
+
+### Data Generation
+
+```python
+python biomqmGeneration/biomqmGenerationa.py <mtcarousel_file> <reference_file1> <reference_file2> <output_file>
+```
+
+```python
+python generateFile.py
+```
 
 ### Question Generation
 
@@ -142,51 +135,6 @@ Evaluation results are saved in the `results/` folder. The `evaluation/` module 
 - Multi-turn coherence metrics
 - Perturbation analysis
 
-## Configuration
 
-System prompts and configurations are defined in the `prompt.json` file. You can customize:
 
-- Templates for question generation
-- Instructions for the QA system
-- Parameters for perturbations
-- Supported languages for translation
 
-## Contributing
-
-Contributions are welcome! To contribute:
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/NewFeature`)
-3. Commit your changes (`git commit -m 'Add NewFeature'`)
-4. Push to the branch (`git push origin feature/NewFeature`)
-5. Open a Pull Request
-
-## License
-
-[Specify project license]
-
-## Authors
-
-- Alessia Cicca - [AlessiaCicca](https://github.com/AlessiaCicca)
-
-## Citation
-
-If you use this code in your research, please cite:
-
-```bibtex
-@misc{askqe-multiturn,
-  author = {Cicca, Alessia},
-  title = {ASKQE-MULTITURN: Multi-turn Question Answering and Generation Framework},
-  year = {2025},
-  publisher = {GitHub},
-  url = {https://github.com/AlessiaCicca/ASKQE-MULTITURN}
-}
-```
-
-## Contact
-
-For questions, suggestions, or bug reports, please open an issue on GitHub or contact the authors.
-
-## Acknowledgments
-
-[Any acknowledgments to projects, libraries, or people who contributed]
