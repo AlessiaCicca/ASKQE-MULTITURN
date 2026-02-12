@@ -4,28 +4,29 @@ import torch
 import argparse
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
+# Model used for QA and follow-up generation
 MODEL_ID = "Qwen/Qwen2.5-3B-Instruct"
 
-# =========================
+
+
 # LOAD PROMPTS
-# =========================
 def load_prompt(path, key):
     with open(path, "r", encoding="utf-8") as f:
         prompts = json.load(f)
     if key not in prompts:
         raise KeyError(f"Prompt key '{key}' not found")
     return prompts[key]
+
+# Cleans model output to ensure it is returned as a plain string.
+# Handles cases where the model returns JSON arrays or quoted strings.
 def clean_response(response):
-    """Rimuove il formato JSON array e converte sempre in stringa"""
     response_str = str(response).strip()
     
-    # Rimuovi parentesi quadre esterne se presenti
+    # Remove surrounding brackets if the model outputs a JSON list
     if response_str.startswith('[') and response_str.endswith(']'):
         response_str = response_str[1:-1].strip()
-        # Rimuovi virgolette se presenti
         if response_str.startswith('"') and response_str.endswith('"'):
             response_str = response_str[1:-1]
-    
     try:
         parsed = json.loads(response_str)
         if isinstance(parsed, list) and len(parsed) > 0:
@@ -33,6 +34,10 @@ def clean_response(response):
         return str(parsed)
     except:
         return response_str
+
+
+
+# GENERATE QA RESPONSE -> Generates an answer to a given question based on the provided text.
 def generate_response(
     tokenizer,
     model,
@@ -40,8 +45,7 @@ def generate_response(
     text,
     question
 ):
-    print(f"Generating response for question: {question}")
-    
+
     prompt = (
         qa_prompt
         .replace("{{sentence}}", text)
@@ -59,12 +63,12 @@ def generate_response(
         return_tensors="pt"
     ).to(model.device)
 
+    # Deterministic generation (greedy decoding)
     with torch.no_grad():
         outputs = model.generate(
             input_ids=inputs["input_ids"],
             max_new_tokens=128,
             do_sample=False,
-            temperature=0.0,
             eos_token_id=tokenizer.eos_token_id
         )
 
@@ -73,13 +77,15 @@ def generate_response(
         skip_special_tokens=True
     ).strip()
 
-    print(f"Generated response: {response}")
     return response
 
 
-# =========================
-# GENERATE FOLLOW-UP QUESTION (SRC ONLY)
-# =========================
+
+# GENERATE FOLLOW-UP QUESTION ->    
+#Generates a follow-up question based on:
+#    - original text (src)
+#    - previous question
+#    - previous answer
 def generate_followup_question(
     tokenizer,
     model,
@@ -88,15 +94,12 @@ def generate_followup_question(
     prev_question,
     prev_answer
 ):
-    print(f"Generating follow-up for: Q: {prev_question} A: {prev_answer}")
-    
     prompt = (
         followup_prompt
         .replace("{{text}}", text)
         .replace("{{prev_question}}", prev_question)
         .replace("{{prev_answer}}", str(prev_answer))
     )
-
     messages = [
         {"role": "system", "content": "You are a helpful assistant."},
         {"role": "user", "content": prompt},
@@ -113,21 +116,28 @@ def generate_followup_question(
             input_ids=inputs["input_ids"],
             max_new_tokens=64,
             do_sample=False,
-            temperature=0.0,
             eos_token_id=tokenizer.eos_token_id
         )
-
     q = tokenizer.decode(
         outputs[0][inputs["input_ids"].shape[-1]:],
         skip_special_tokens=True
     ).strip()
 
-    print(f"Generated follow-up question: {q}")
     return q
 
-# =========================
-# MAIN
-# =========================
+
+# MAIN PIPELINE
+  """
+    Multi-turn ASKQE pipeline:
+
+    For each input example:
+    - Takes original questions and answers
+    - Generates follow-up questions providing also the original text
+    - Generates answers for SRC and BT
+    - Iterates for multiple turns
+    - Stores structured multi-turn QA results
+    """
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_path", required=True)
@@ -137,17 +147,18 @@ def main():
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
 
-    # ---- load prompts
+    # Load prompt templates
     qa_prompt = load_prompt(args.prompt_path, "qa_prompt")
     followup_prompt = load_prompt(args.prompt_path, "followup_prompt")
 
-    # ---- model
+    # Load tokenizer and model
     tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         torch_dtype=torch.bfloat16,
         device_map="auto"
     )
+
     tokenizer.pad_token = tokenizer.eos_token
     model.config.pad_token_id = tokenizer.eos_token_id
 
@@ -165,34 +176,34 @@ def main():
             answers_src = data.get("answers_src")
             entry_id = data.get("id")
 
+            # Skip incomplete entries
             if not src or not bt or not questions or not answers_src or not entry_id:
                 continue
 
             multiturn = {}
-
-            if args.debug:
-                print(f"\n[MULTITURN] ID={data['id']}")
 
             current_questions = questions
             current_answers = answers_src
             turn_counter = 1
             question_counter = 1
 
+            # Iterative multi-turn QA loop
             while turn_counter <= args.max_turns:
                 next_questions = []
                 next_answers = []
                 multiturn[f"turn_{turn_counter}"] = []
 
                 for q, a in zip(current_questions, current_answers):
-                    # Gestisci "No Answer" sostituendo con src
+
+                    # Handle empty or "No Answer" by providing the all original text
                     if a == "No Answer" or not a or str(a).strip() == "":
                         a = src
                     else:
-                        a = str(a)  # Assicurati che sia sempre stringa
+                        a = str(a)
 
                     question_id = f"{entry_id}.{question_counter}"
 
-                    # Genera follow-up question
+                    # Generate follow-up question
                     next_q = generate_followup_question(
                         tokenizer,
                         model,
@@ -201,8 +212,8 @@ def main():
                         prev_question=q,
                         prev_answer=a
                     )
-                    
-                    # Genera risposte e puliscile
+
+                    # Generate answer from SRC
                     followup_response = generate_response(
                         tokenizer,
                         model,
@@ -210,34 +221,27 @@ def main():
                         text=src,
                         question=next_q
                     )
+                    # 
                     followup_response = clean_response(followup_response)
 
+                    # Generate answer from BT
                     followup_response_bt = generate_response(
                         tokenizer,
                         model,
                         qa_prompt,
                         text=bt,
                         question=next_q
-                    )
                     followup_response_bt = clean_response(followup_response_bt)
 
-                    # Salva sempre (rimuovo il filtro endswith("?"))
+                    # Store multi-turn interaction
                     multiturn[f"turn_{turn_counter}"].append({
                         "question_id": question_id,
                         "question": q,
-                        "answer_src": str(a) if a != src else a,  # Mantieni src se usato
+                        "answer_src": str(a) if a != src else a,
                         "follow_up_question": next_q,
                         "follow_up_response": followup_response,
                         "follow_up_response_bt": followup_response_bt
                     })
-
-                    if args.debug:
-                        print(f" Turn {turn_counter}")
-                        print(f"  Q: {q}")
-                        print(f"  A_SRC: {a}")
-                        print(f"  Follow-Up Q: {next_q}")
-                        print(f"  Follow-Up Response: {followup_response}")
-                        print(f"  Follow-Up Response BT: {followup_response_bt}")
 
                     next_questions.append(next_q)
                     next_answers.append(followup_response)
@@ -246,12 +250,11 @@ def main():
                 current_questions = next_questions
                 current_answers = next_answers
                 turn_counter += 1
-                # RIMOSSO: question_counter = 1  (per avere ID progressivi)
 
             data["multiturn"] = multiturn
             f_out.write(json.dumps(data, ensure_ascii=False) + "\n")
 
-    print("✅ MULTI-TURN ASKQE COMPLETED")
+    print("MULTI-TURN ASKQE COMPLETED")
 
 if __name__ == "__main__":
     main()
